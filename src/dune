@@ -1,0 +1,4 @@
+(executable
+  (name graphic_calc)
+  (public_name graphic-calc)
+  (libraries calculator grid))
