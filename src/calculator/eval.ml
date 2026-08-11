@@ -7,7 +7,7 @@ exception UndefinedFunction of string
 exception WrongNumberOfArguments of string
 
 module Env = Map.Make(String)
-type env_t = { vars : float Env.t ; funcs : (string list * expr * env_t) Env.t }
+type env_t = { vars : float Env.t ; funcs : (string list * expr) Env.t }
 
 let is_num = function
   | Num _ -> true
@@ -32,7 +32,7 @@ let rec eval (env : env_t) (l : line) : (env_t * float option) =
       List.iter (fun var_id -> 
         if not (Env.mem var_id env.vars) && not (List.mem var_id params) 
         then raise (UnboundVariable ("Unbound Variable : " ^ var_id))) (get_vars e);
-      ({ env with funcs = Env.add id (params, e, env) env.funcs}, None)
+      ({ env with funcs = Env.add id (params, e) env.funcs}, None)
 
 and eval_expr env e =
   match e with 
@@ -74,7 +74,7 @@ and eval_assign env id e =
   ({ env with vars = Env.add id (Option.get v) env.vars }, v)
 
 and eval_call env id expr_list =
-  let param_list, e, defenv = 
+  let param_list, e = 
     match Env.find_opt id env.funcs with
     | Some x -> x
     | None -> raise (UndefinedFunction ("Function " ^ id ^ " is not defined"))
@@ -88,10 +88,10 @@ and eval_call env id expr_list =
   let vars = 
     List.fold_left2 
       (fun m id v -> Env.add id v m)
-      defenv.vars
+      env.vars
       param_list 
       (List.map (fun expr -> Option.get(eval_expr env expr)) expr_list)
   in
   
-  eval_expr { defenv with vars = vars } e
+  eval_expr { env with vars = vars } e
 
