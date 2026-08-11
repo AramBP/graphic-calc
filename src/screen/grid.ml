@@ -16,7 +16,7 @@ let init () =
   in
   {origin = origin ; camera = camera ; pixels_per_unit = 100. ; unit_multiplier = 1.0}
 
-let draw_grid (grid: t) =
+let draw (grid: t) font =
   let origin = grid.origin in
   let camera = grid.camera in
   let pixels_per_unit = grid.pixels_per_unit in
@@ -63,7 +63,7 @@ let draw_grid (grid: t) =
     draw_vert_lines (-1. *. (distance_between_lines +. incr)) 1. Raylib.Color.lightgray
   done;
 
-  let font_size = 10. /. Raylib.Camera2D.zoom grid.camera |> Float.to_int in
+  let font_size = 16. /. Raylib.Camera2D.zoom grid.camera in
   for i = 0 to n_lines do
     let incr = pixels_per_unit *. Float.of_int i in
     let pos = pixels_per_unit +. incr in
@@ -76,41 +76,41 @@ let draw_grid (grid: t) =
 
     let round n = Float.(n *. 100. |> round |> fun x -> x /. 100.) in
     let num = grid.unit_multiplier *. pos /. pixels_per_unit |> round in 
-    let vert_num_y = Raylib.Vector2.y origin +. 5. |> Float.to_int in
-    Raylib.draw_text 
+    let vert_num_y = Raylib.Vector2.y origin +. 5. in
+    Raylib.draw_text_ex 
+      font
       (-1. *. num |> Float.to_string) 
-      (Float.to_int (neg +. Raylib.Vector2.x origin)) 
-      vert_num_y font_size Raylib.Color.darkgray;
-    Raylib.draw_text 
+      Raylib.Vector2.(create (neg +. x origin) vert_num_y) 
+      font_size 2. Raylib.Color.darkgray;
+    Raylib.draw_text_ex
+      font
       (num |> Float.to_string)
-      (Float.to_int (pos +. Raylib.Vector2.x origin))
-      vert_num_y font_size Raylib.Color.darkgray;
+      Raylib.Vector2.(create (pos +. x origin) vert_num_y) 
+      font_size 2. Raylib.Color.darkgray;
 
-    let hor_num_x = Raylib.Vector2.x origin -. 20. |> Float.to_int in
-    Raylib.draw_text
+    let hor_num_x = Raylib.Vector2.x origin -. 20. in
+    Raylib.draw_text_ex
+      font
       (-1. *. num |> Float.to_string)
-      (hor_num_x - 5)
-      (Float.to_int (pos +. Raylib.Vector2.y origin))
-      font_size Raylib.Color.darkgray;
-    Raylib.draw_text
+      Raylib.Vector2.(create (hor_num_x -. 5.) (pos +. y origin))
+      font_size 2. Raylib.Color.darkgray;
+    Raylib.draw_text_ex
+      font
       (num |> Float.to_string)
-      hor_num_x 
-      (Float.to_int (neg +. Raylib.Vector2.y origin))
-      font_size Raylib.Color.darkgray
+      Raylib.Vector2.(create hor_num_x (neg +. y origin))
+      font_size 2. Raylib.Color.darkgray
       
   done;
 
   draw_vert_lines 0. 2. Raylib.Color.black;
   draw_hor_lines 0. 2. Raylib.Color.black;
-  Raylib.draw_text 
+  Raylib.draw_text_ex
+    font
     "0"
-    (Raylib.Vector2.x origin -. 10. |> Float.to_int)
-    (Raylib.Vector2.y origin +. 5. |> Float.to_int)
-    font_size 
-    Raylib.Color.darkgray
+    Raylib.Vector2.(create (x origin -. 10.) (y origin +. 5.))
+    font_size 2. Raylib.Color.darkgray
 
-
-let update_grid (grid: t) =
+let update (grid: t) =
   let clamp x mi ma = Float.(max mi (min ma x)) in
   let camera = grid.camera in
 
