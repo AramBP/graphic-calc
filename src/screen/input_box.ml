@@ -1,5 +1,6 @@
 type t = {
   box : Raylib.Rectangle.t ;
+  font_size : float ;
   input_fields : input_field array
 }
 and input_field = {
@@ -8,8 +9,9 @@ and input_field = {
   field : Raylib.Rectangle.t ; 
   mouse_on_text : bool ; 
   is_init : bool ;
-  font_size : float 
 }
+
+let max_chars input_box = (Raylib.Rectangle.width input_box.box |> Int.of_float) / (Int.of_float (input_box.font_size /. 2.)) 
 
 let init () =
   let x, y = (10., 10.) in
@@ -22,14 +24,14 @@ let init () =
 
   {
     box = Raylib.Rectangle.create x y (width +. 4.) height ;
+    font_size = 16. ;
     input_fields = Array.init n_fields (fun i -> 
       { 
         content = "Input..." ; 
         output = "Output..." ;
         field = Raylib.Rectangle.create (x +. 2.) (y +. white_space /. 2. +. input_field_height *. Float.of_int i) width (input_field_height -. 2.) ; 
         mouse_on_text = false ;
-        is_init = true ;
-        font_size = 16.
+        is_init = true 
       }
     )
   }
@@ -56,21 +58,24 @@ let draw input_box font =
       Raylib.draw_text_ex 
         font
         input_field.content 
-        Raylib.(Vector2.create (5. +. Rectangle.x input_field.field) (Rectangle.(height input_field.field /. 4. +. y input_field.field) -. input_field.font_size /. 2.)) 
-        input_field.font_size 2. text_color;
+        Raylib.(Vector2.create (5. +. Rectangle.x input_field.field) (Rectangle.(height input_field.field /. 4. +. y input_field.field) -. input_box.font_size /. 2.)) 
+        input_box.font_size 2. text_color;
+      
+      let output = String.drop_last ((2 + String.length input_field.output) - (max_chars input_box)) input_field.output in
+      let output = if String.equal output input_field.output then output else (String.drop_last 3 output) ^ "..." in
       Raylib.draw_text_ex
         font
-        ("(>) " ^ input_field.output)
-        Raylib.(Vector2.create (5. +. Rectangle.x input_field.field) (Rectangle.(height input_field.field *. (3./.4.) +. y input_field.field) -. input_field.font_size /. 2.))
-        input_field.font_size 2. text_color
+        ("> " ^ output)
+        Raylib.(Vector2.create (5. +. Rectangle.x input_field.field) (Rectangle.(height input_field.field *. (3./.4.) +. y input_field.field) -. input_box.font_size /. 2.))
+        input_box.font_size 2. text_color
     )  
     input_box.input_fields
 
-let update input_box =
-  let input_fields = input_box.input_fields in
+let update input_box env =
   let hover = ref false in
-  Array.iteri 
-    (fun i input_field ->
+  let max_chars = max_chars input_box in
+  let env, input_fields = Array.fold_left_map
+    (fun env_acc input_field ->
       if Raylib.(check_collision_point_rec (get_mouse_position ()) input_field.field) 
       then (
         if not !hover then hover := true;
@@ -81,8 +86,8 @@ let update input_box =
             let next_char = if (key_num >= 32 && key_num <= 125) then String.of_char key else "" in
             if input_field.is_init then next_char
             else
-              let max_chars = (Raylib.Rectangle.width input_field.field |> Int.of_float) / (Int.of_float (input_field.font_size /. 2.)) + 2 in
-              if 1 + String.length content > max_chars then content else add_content (content ^ next_char) (Raylib.get_char_pressed ())
+              (* Magic number 5 for the max characteris in the input field, it overflows otherwise *)
+              if 5 + String.length content < max_chars then add_content (content ^ next_char) (Raylib.get_char_pressed ()) else content
           )     
         in
        
@@ -97,10 +102,16 @@ let update input_box =
           if not (String.equal input_field.content content) && input_field.is_init then false
           else input_field.is_init
         in
+        
+        let output, env_acc = 
+          if is_init then (input_field.output, env_acc)
+          else Calculator.interp env_acc content 
+        in
 
-        input_fields.(i) <- { input_field with content = content ; mouse_on_text = true ; is_init = is_init };)
-      else input_fields.(i) <- { input_field with mouse_on_text = false }
-    ) input_box.input_fields;
+        (env_acc, { input_field with content = content ; output = output ; mouse_on_text = true ; is_init = is_init }))
+      else (env_acc, { input_field with mouse_on_text = false })
+    ) env input_box.input_fields
+  in
   if !hover then Raylib.set_mouse_cursor Raylib.MouseCursor.Ibeam else Raylib.set_mouse_cursor Raylib.MouseCursor.Default;
-  { input_box with input_fields = input_fields }
+  ({ input_box with input_fields = input_fields }, env)
 

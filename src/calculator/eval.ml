@@ -9,6 +9,7 @@ exception WrongNumberOfArguments of string
 module Env = Map.Make(String)
 type env_t = { vars : float Env.t ; funcs : (string list * expr) Env.t }
 
+
 let is_num = function
   | Num _ -> true
   | Binop _ | Unop _ | Var _ | Call _ -> false

@@ -1,8 +1,13 @@
 open Core
 open Lexer
 open Lexing
-open Eval
 open Ast
+
+module Env = Eval.Env
+type env_t = Eval.env_t
+
+open Eval
+let init_env () = { vars = Env.empty ; funcs = Env.empty }
 
 let rec expr_to_string e env =
   match e with
@@ -10,7 +15,7 @@ let rec expr_to_string e env =
   | Var id -> 
       (match Env.find_opt id env.vars with
       | Some v -> Float.to_string v
-      | None -> raise (UnboundVariable ("Unbound Variable : " ^ id)))
+      | None -> id)
   | Binop (bop, e1, e2) -> (expr_to_string e1 env) ^ (bin_op_to_string bop) ^ (expr_to_string e2 env)
   | Unop (uop, e) -> (un_op_to_string uop) ^ (expr_to_string e env)
   | Call (id, expr_list) ->
@@ -62,10 +67,16 @@ let eval_with_error env ln =
 let interp env input =
   let lexbuf = Lexing.from_string input in
   match parse_with_error lexbuf with
-  | Ok (Some ln) -> (match eval_with_error env ln with
+  | Ok (Some ln) -> 
+    let is_assign = match ln with
+    | Assign _ | FunDef _ -> true
+    | Expr _ -> false
+    in
+
+    (match eval_with_error env ln with
     | Ok (env', v_opt) -> (match v_opt with
-      | Some v -> (Float.to_string v, env')
-      | None -> ("", env')
+      | Some v -> ((if is_assign then line_to_string env' ln else Float.to_string v), env')
+      | None -> ((if is_assign then line_to_string env' ln else ""), env')
     )
     | Error err -> (err, env)
   )
