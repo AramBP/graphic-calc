@@ -23,7 +23,6 @@ let get_vars e =
   in
   List.sort_uniq String.compare (aux [] e)
 
-
 let rec eval (env : env_t) (l : line) : (env_t * float option) = 
   match l with
   | Expr e -> (env, eval_expr env e)
