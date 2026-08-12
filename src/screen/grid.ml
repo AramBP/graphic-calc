@@ -3,6 +3,10 @@ type t = {origin : Raylib.Vector2.t;
   pixels_per_unit : float;
   unit_multiplier : float}
 
+
+module Func_Points = Map.Make(String)
+type sampled_points_t = Raylib.Vector2.t list Func_Points.t
+
 let init () =
   let offset = Raylib.Vector2.zero () in
   let target = Raylib.Vector2.zero () in
@@ -16,11 +20,72 @@ let init () =
   in
   {origin = origin ; camera = camera ; pixels_per_unit = 100. ; unit_multiplier = 1.0}
 
-let draw (grid: t) font =
+let coord_to_world_pos (grid : t) (coord : Raylib.Vector2.t) =
+  let coord = Raylib.Vector2.(multiply coord (create (1.) (-1.))) in
+  let coord_pix = Raylib.Vector2.scale coord grid.pixels_per_unit in 
+  let coord_scaled = Raylib.Vector2.scale coord_pix (1. /. grid.unit_multiplier) in
+  let coord_origin = Raylib.Vector2.add coord_scaled grid.origin in
+  coord_origin
+ 
+let world_pos_to_coord (grid : t) (world_pos : Raylib.Vector2.t) =
+  let world_pos_origin = Raylib.Vector2.(add world_pos (scale grid.origin (-1.))) in 
+  let coord_inv_y = Raylib.Vector2.scale world_pos_origin (1. /. grid.pixels_per_unit) in
+  let coord = Raylib.Vector2.(multiply coord_inv_y (create (1.) (-1.))) in
+  Raylib.Vector2.scale coord grid.unit_multiplier
+
+let x_axis_range (grid : t) =
+  let x_axis_min_world = Raylib.get_screen_to_world_2d (Raylib.Vector2.(create 0. 0.)) grid.camera in
+  let x_axis_max_world = Raylib.get_screen_to_world_2d (Raylib.Vector2.(create (Float.of_int (Raylib.get_screen_width ())) 0.)) grid.camera in
+
+  let x_axis_min = Raylib.Vector2.x (world_pos_to_coord grid x_axis_min_world) in
+  let x_axis_max = Raylib.Vector2.x (world_pos_to_coord grid x_axis_max_world) in  
+  (x_axis_min, x_axis_max)
+
+let sample_func_points (range : (float * float)) (func_name : string) (env : Calculator.env_t) =
+  let n = 2000 in
+  let (a, b) = range in
+  let weyl_x = 
+    List.(sort Float.compare (init n (
+      fun i -> 
+        let k = Float.of_int (i+1) in
+        let step_size = Float.exp (-1.) in
+        a +. (b -. a) *. (Float.rem (k *. step_size) 1.0)
+    ))) 
+  in
+  
+  let rec get_points = function
+    | x::xs -> 
+        let v = Calculator.call_func env func_name x in
+        if Option.is_none v then get_points xs
+        else begin
+          let y = Option.get v in
+          if Float.abs(y) > 1000. then get_points xs
+          else (x,y)::(get_points xs) 
+        end
+    | [] -> []
+  in
+  get_points weyl_x
+ 
+let draw_func (grid : t) (range_prev : (float * float)) (sampled_points_map : sampled_points_t) (func_name : string) (env : Calculator.env_t) =
+  let (a_prev, b_prev) = range_prev in
+  let (a_new, b_new)= x_axis_range grid in
+  
+  let sampled_points_opt = Func_Points.find_opt func_name sampled_points_map in
+  let (sampled_points, sampled_points_map) = 
+    if a_prev = a_new && a_prev = a_new && Option.is_some sampled_points_opt then (Option.get sampled_points_opt, sampled_points_map)
+    else
+      let sampled_coords = sample_func_points (x_axis_range grid) func_name env in
+      let points = List.map (fun (x, y) -> coord_to_world_pos grid (Raylib.Vector2.create x y)) sampled_coords in 
+      (points, Func_Points.add func_name points sampled_points_map) 
+  in
+  List.iter (fun pixel_pos -> Raylib.draw_pixel_v pixel_pos Raylib.Color.black) sampled_points;
+  sampled_points_map
+  
+
+let draw (grid : t) (grid_prev : t) (sampled_points_map : sampled_points_t) (env : Calculator.env_t) font =
   let origin = grid.origin in
   let camera = grid.camera in
   let pixels_per_unit = grid.pixels_per_unit in
-
 
   let draw_vert_lines distance_from_origin thick color =
     let width = Float.of_int (Raylib.get_screen_width ()) in
@@ -99,7 +164,6 @@ let draw (grid: t) font =
       (num |> Float.to_string)
       Raylib.Vector2.(create hor_num_x (neg +. y origin))
       font_size 2. Raylib.Color.darkgray
-      
   done;
 
   draw_vert_lines 0. 2. Raylib.Color.black;
@@ -108,7 +172,13 @@ let draw (grid: t) font =
     font
     "0"
     Raylib.Vector2.(create (x origin -. 10.) (y origin +. 5.))
-    font_size 2. Raylib.Color.darkgray
+    font_size 2. Raylib.Color.darkgray;
+   Raylib.draw_pixel_v (coord_to_world_pos grid (Raylib.Vector2.create 0.5 0.5)) Raylib.Color.black;
+
+  let func_names = List.map (fun (k, v) -> k) (Calculator.Env.bindings env.funcs) in
+  let range_prev = x_axis_range grid_prev in
+  List.fold_left (fun acc func_name -> draw_func grid range_prev acc func_name env) sampled_points_map func_names
+  
 
 let update (grid: t) =
   let clamp x mi ma = Float.(max mi (min ma x)) in

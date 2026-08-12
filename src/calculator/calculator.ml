@@ -74,7 +74,8 @@ let interp env input =
     in
 
     (match eval_with_error env ln with
-    | Ok (env', v_opt) -> (match v_opt with
+    | Ok (env', v_opt) -> 
+    (match v_opt with
       | Some v -> ((if is_assign then line_to_string env' ln else Float.to_string v), env')
       | None -> ((if is_assign then line_to_string env' ln else ""), env')
     )
@@ -82,4 +83,26 @@ let interp env input =
   )
   | Error err -> (err, env)
   | _ -> (input, env)
+
+let call_func env func_name x =
+  let output = 
+    match (interp env (Format.asprintf ("%s(%f)") func_name x)) with
+    | (s, _) -> s
+  in
+
+  try
+    let v = Float.of_string output in
+    if Float.is_nan v || not (Float.is_finite v) then
+      None
+    else 
+      Some v
+  with
+  | Failure _ 
+  | UnboundVariable _
+  | DivisionByZero _
+  | OperatorOperandMismatch _
+  | UndefinedFunction _
+  | Invalid_argument _
+  | WrongNumberOfArguments _ -> None
+
 
