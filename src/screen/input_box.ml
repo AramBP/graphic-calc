@@ -86,7 +86,7 @@ let update input_box env =
             let next_char = if (key_num >= 32 && key_num <= 125) then String.of_char key else "" in
             if input_field.is_init then next_char
             else
-              (* Magic number 5 for the max characteris in the input field, it overflows otherwise *)
+              (* Magic number 5 for the max characters in the input field, it overflows otherwise *)
               if 5 + String.length content < max_chars then add_content (content ^ next_char) (Raylib.get_char_pressed ()) else content
           )     
         in
