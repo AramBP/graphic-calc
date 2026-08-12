@@ -42,7 +42,8 @@ prog:
 
 line:
   | id=ID; EQUAL; e=expr                                  { Assign (id, e) }
-  | id=ID; LPAREN; args=expr_list; RPAREN; EQUAL; e=expr  { FunDef (id, exprs_to_params args, e) }
+  | id=ID; LPAREN; args=expr_list; RPAREN; EQUAL; e=expr  { FunDef (id, exprs_to_params args, Some e) }
+  | id=ID; LPAREN; args=expr_list; RPAREN; EQUAL          { FunDef (id, exprs_to_params args, None) }
   | e=expr                                                { Expr e } ;
 
 expr:

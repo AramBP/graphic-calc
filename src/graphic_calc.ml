@@ -9,9 +9,9 @@ let setup () =
   Raylib.set_texture_filter (Raylib.Font.texture font) Raylib.TextureFilter.Bilinear;
   Raylib.set_target_fps 60;
   
-  (Grid.init (), Input_box.init (), Calculator.init_env (), Grid.Func_Points.empty, font)
+  (Grid.init (), Input_box.init (), Calculator.init_env (), Grid.init_func_info (), font)
 
-let rec loop (grid: Grid.t) (input_box: Input_box.t) (env : Calculator.env_t) (sampled_points_map : Grid.sampled_points_t) font =
+let rec loop (grid: Grid.t) (input_box: Input_box.t) (env : Calculator.env_t) (func_info : Grid.func_info_t) font =
   match Raylib.window_should_close () with
   | true -> Raylib.close_window ()
   | false -> 
@@ -22,7 +22,7 @@ let rec loop (grid: Grid.t) (input_box: Input_box.t) (env : Calculator.env_t) (s
     Raylib.clear_background Raylib.Color.raywhite;
 
     Raylib.begin_mode_2d grid.camera;
-    let sampled_points_map = Grid.draw grid grid_prev sampled_points_map env font in
+    let sampled_points_map = Grid.draw grid grid_prev func_info env font in
     Raylib.end_mode_2d ();
     Input_box.draw input_box font;
 

@@ -23,7 +23,7 @@ type expr =
 type line = 
   | Assign of string * expr
   | Expr of expr
-  | FunDef of string * string list * expr
+  | FunDef of string * string list * expr option
 
 let bin_op_to_string = function
   | Add -> "+"

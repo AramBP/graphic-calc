@@ -29,9 +29,11 @@ let line_to_string env ln =
   match ln with
   | Assign (id, e) -> id ^ " = " ^ expr_to_string e env
   | Expr e -> expr_to_string e env
-  | FunDef (id, params, e) -> 
+  | FunDef (id, params, Some e) -> 
       id ^ "(" ^ (String.concat ~sep:", " params) ^ ")" ^ " = " ^ expr_to_string e env
-  
+  | FunDef (id, params, None) ->
+      id ^ "(" ^ (String.concat ~sep:", " params) ^ ")" ^ " = "
+
 let get_position lexbuf =
   let pos = lexbuf.lex_curr_p in
   Format.asprintf "%s:%d:%d" pos.pos_fname

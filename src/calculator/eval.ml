@@ -28,11 +28,14 @@ let rec eval (env : env_t) (l : line) : (env_t * float option) =
   match l with
   | Expr e -> (env, eval_expr env e)
   | Assign (id, e) -> eval_assign env id e
-  | FunDef (id, params, e) -> 
+  | FunDef (id, params, Some e) ->
       List.iter (fun var_id -> 
         if not (Env.mem var_id env.vars) && not (List.mem var_id params) 
         then raise (UnboundVariable ("Unbound Variable : " ^ var_id))) (get_vars e);
       ({ env with funcs = Env.add id (params, e) env.funcs}, None)
+  | FunDef (id, _, None) -> 
+      let env = if Env.mem id env.funcs then { env with funcs = Env.remove id env.funcs } else env in
+      (env, None)
 
 and eval_expr env e =
   match e with 
@@ -55,7 +58,7 @@ and eval_bin_op env bop e1 e2 =
   | Sub, Some x, Some y -> Some (x -. y)
   | Mult, Some x, Some y -> Some (x *. y)
   | Div, Some x, Some y -> 
-      if Int.equal (Float.to_int y) 0 then raise (DivisionByZero ("Division By Zero"))
+      if Float.abs y < 1e-6 then raise (DivisionByZero ("Division By Zero"))
       else Some (x /. y)
   | Pow, Some x, Some y -> Some (Float.pow x y)
 
