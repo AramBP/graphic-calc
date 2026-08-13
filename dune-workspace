@@ -1,6 +1,2 @@
 (lang dune 3.24)
 (pkg enabled)
-(lock_dir
- (solve_for_platforms
-  ((arch x86_64) (os linux))
-  ((arch x86_64) (os win32))))
