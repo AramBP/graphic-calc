@@ -7,5 +7,4 @@
   (synopsis "Graphical Calculator")
   (depends
     (raylib (>= 2.2.1))
-    (core (>= 0.17.2))
     (menhir (>= 3.0))))

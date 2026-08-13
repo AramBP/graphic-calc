@@ -1,4 +1,3 @@
-open Core
 open Lexer
 open Lexing
 open Ast
@@ -19,20 +18,20 @@ let rec expr_to_string e env =
   | Binop (bop, e1, e2) -> (expr_to_string e1 env) ^ (bin_op_to_string bop) ^ (expr_to_string e2 env)
   | Unop (uop, e) -> (un_op_to_string uop) ^ (expr_to_string e env)
   | Call (id, expr_list) ->
-      let expr_strings = List.mapi ~f:(fun i e ->
+      let expr_strings = List.mapi (fun i e ->
           (expr_to_string e env) ^ (if i > 0 then ", " else "")  
         ) expr_list
       in
-      id ^ "(" ^ (String.concat ~sep:", " expr_strings) ^ ")" 
+      id ^ "(" ^ (String.concat ", " expr_strings) ^ ")" 
 
 let line_to_string env ln =
   match ln with
   | Assign (id, e) -> id ^ " = " ^ expr_to_string e env
   | Expr e -> expr_to_string e env
   | FunDef (id, params, Some e) -> 
-      id ^ "(" ^ (String.concat ~sep:", " params) ^ ")" ^ " = " ^ expr_to_string e env
+      id ^ "(" ^ (String.concat ", " params) ^ ")" ^ " = " ^ expr_to_string e env
   | FunDef (id, params, None) ->
-      id ^ "(" ^ (String.concat ~sep:", " params) ^ ")" ^ " = "
+      id ^ "(" ^ (String.concat ", " params) ^ ")" ^ " = "
 
 let get_position lexbuf =
   let pos = lexbuf.lex_curr_p in

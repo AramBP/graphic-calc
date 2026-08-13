@@ -1,5 +1,4 @@
 (menhir (modules parser))
 (ocamllex lexer)
 (library
-  (name calculator)
-  (libraries core))
+  (name calculator))
