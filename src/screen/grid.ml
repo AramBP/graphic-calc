@@ -71,55 +71,24 @@ let sample_func_points (weyl_x: float list) (func_name : string) (env : Calculat
     | [] -> []
   in
   get_points weyl_x
-
- 
-let draw_func (grid : t) (range_prev : (float * float)) (weyl_x : float list) (func_info_map : func_info_t) (func_name : string) (env : Calculator.env_t) =
-  let (a_prev, b_prev) = range_prev in
-  let (a_new, b_new)= x_axis_range grid in
-  
-  let func_info_opt = Func_Info.find_opt func_name func_info_map in
-  let func_exists = Func_Info.mem func_name func_info_map in 
-
-  let sample () =
-     let coords = sample_func_points weyl_x func_name env in
-     List.map (fun (x, y) -> coord_to_world_pos grid (Raylib.Vector2.create x y)) coords
-  in
-  
-  let func_expr = match (Calculator.Env.find func_name env.funcs) with | (_, e) -> e  in
-  let def_body = Calculator.expr_to_string func_expr env in
-  
-  let sampled_points = 
-    if func_exists then
-      let func_info = Option.get func_info_opt in
-      if String.equal func_info.body def_body then 
-        if a_prev = a_new && b_prev = b_new then func_info.sampled_points
-        else sample ()
-      else sample ()
-    else sample ()
-  in
-  
-  let color = 
-    if func_exists then (Option.get func_info_opt).color
-    else 
-      let n_colors_in_use = List.length (Func_Info.to_list func_info_map) in
-      if n_colors_in_use > (Array.length colors) - 1 then Raylib.Color.black
-      else colors.(n_colors_in_use)
-  in
-  
-  let world_thick = 2. /. Raylib.Camera2D.zoom grid.camera in
-  let draw_fun_lines points = 
-    let rec aux prev_point = function    
-    | point::tl -> 
-        if Raylib.Vector2.distance prev_point point < (1. *. grid.unit_multiplier *. grid.pixels_per_unit) then Raylib.draw_line_ex prev_point point world_thick color;
-        aux point tl
-    | [] -> ()
+   
+let draw_func (grid : t) (func_name : string) (func_info_map : func_info_t) (env : Calculator.env_t) =
+  match Func_Info.find_opt func_name func_info_map with
+  | None -> ()
+  | Some { color ; sampled_points ; body } ->
+    let world_thick = 2. /. Raylib.Camera2D.zoom grid.camera in
+    let draw_fun_lines points = 
+      let rec aux prev_point = function    
+      | point::tl -> 
+          if Raylib.Vector2.distance prev_point point < (1. *. grid.unit_multiplier *. grid.pixels_per_unit) then Raylib.draw_line_ex prev_point point world_thick color;
+          aux point tl
+      | [] -> ()
+      in
+      aux (List.hd points) (List.tl points);
     in
-    aux (List.hd points) (List.tl points);
-  in
-  draw_fun_lines sampled_points;
-  Func_Info.add func_name { color = color ; sampled_points = sampled_points ; body = def_body } func_info_map
+    draw_fun_lines sampled_points
 
-let draw (grid : t) (grid_prev : t) (func_info : func_info_t) (env : Calculator.env_t) font =
+let draw (grid : t) (grid_prev : t) (func_info_map : func_info_t) (env : Calculator.env_t) font =
   let origin = grid.origin in
   let camera = grid.camera in
   let pixels_per_unit = grid.pixels_per_unit in
@@ -212,9 +181,47 @@ let draw (grid : t) (grid_prev : t) (func_info : func_info_t) (env : Calculator.
     font_size 2. Raylib.Color.darkgray;
 
   let func_names = List.map (fun (k, v) -> k) (Calculator.Env.bindings env.funcs) in
-  let range_prev = x_axis_range grid_prev in
+  List.iter (fun func_name -> draw_func grid func_name func_info_map env) func_names
+
+let update_func (grid : t) (grid_prev : t) (weyl_x) (func_info_map : func_info_t) (func_name : string) (env : Calculator.env_t) =
+  let (a_prev, b_prev) = x_axis_range grid_prev in
+  let (a_new, b_new) = x_axis_range grid in
+ 
+  let func_info_opt = Func_Info.find_opt func_name func_info_map in 
+  let func_exists = Func_Info.mem func_name func_info_map in 
+
+  let sample () =
+     let coords = sample_func_points weyl_x func_name env in
+     List.map (fun (x, y) -> coord_to_world_pos grid (Raylib.Vector2.create x y)) coords
+  in
+  
+  let func_expr = match (Calculator.Env.find func_name env.funcs) with | (_, e) -> e  in
+  let def_body = Calculator.expr_to_string func_expr env in
+  
+  let sampled_points = 
+    if func_exists then
+      let func_info = Option.get func_info_opt in
+      if String.equal func_info.body def_body then 
+        if a_prev = a_new && b_prev = b_new then func_info.sampled_points
+        else sample ()
+      else sample ()
+    else sample ()
+  in
+  
+  let color = 
+    if func_exists then (Option.get func_info_opt).color
+    else 
+      let n_colors_in_use = List.length (Func_Info.to_list func_info_map) in
+      if n_colors_in_use > (Array.length colors) - 1 then Raylib.Color.black
+      else colors.(n_colors_in_use)
+  in
+
+  Func_Info.add func_name { color = color ; sampled_points = sampled_points ; body = def_body } func_info_map
+
+let update_func_info (grid : t) (grid_prev : t) (func_info_map : func_info_t) (env : Calculator.env_t) =
+  let func_names = List.map (fun (k, v) -> k) (Calculator.Env.bindings env.funcs) in
   let weyl = weyl_list (x_axis_range grid) in
-  List.fold_left (fun acc func_name -> draw_func grid range_prev weyl acc func_name env) func_info func_names
+  List.fold_left (fun acc func_name -> update_func grid grid_prev weyl acc func_name env) func_info_map func_names
 
 let update (grid: t) =
   let clamp x mi ma = Float.(max mi (min ma x)) in

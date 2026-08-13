@@ -1,3 +1,5 @@
+(copy_files (files ../assets/Roboto-Regular.ttf))
+
 (executable
   (name graphic_calc)
   (public_name graphic-calc)
