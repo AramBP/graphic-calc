@@ -1,4 +1,5 @@
 # graphic-calc
+![Example](assets/screen_shot.png)
 A graphical calculator built with OCaml and Raylib. 
 Partly based on my other project 'functional-calculator'.
 
@@ -12,5 +13,5 @@ Partly based on my other project 'functional-calculator'.
 Note that the name of the argument isn't relevant.
 
 ## Install
-
+Pre-build binaries for linux and windows can be found in the releases.
 
