@@ -1,6 +1,5 @@
 (lang dune 3.24)
 (name graphic-calc)
-(authors "Aram Brouwer")
 (using menhir 3.0)
 (package
   (name graphic-calc)

@@ -13,5 +13,4 @@ Note that the name of the argument isn't relevant.
 
 ## Install
 
-### Build with Dune
 
